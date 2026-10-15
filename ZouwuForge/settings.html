@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Zouwu Forge — Настройки</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .badge.ltx { background: #7c5cff; color: #fff; }
+  button.primary { background: #7c5cff; border-color: #7c5cff; color: #fff; }
+  button.primary:hover { background: #6a4be6; }
+  .bar > div { background: #7c5cff; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+  .tabs button { flex: 1; }
+  .tabs button.on { background: #7c5cff; border-color: #7c5cff; color: #fff; }
+  .files div { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
+  .files .sz { color: var(--muted); white-space: nowrap; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; }
+  .hint { background: var(--field); border-left: 3px solid #7c5cff; padding: 6px 8px; border-radius: 3px; margin: 6px 0; }
+  .access a { display: block; margin: 3px 0; }
+</style>
+</head>
+<body>
+<h1><span class="badge ltx">Zouwu Forge</span> Настройки</h1>
+
+<div class="tabs">
+  <button data-tab="models" class="on">Модели</button>
+  <button data-tab="quality">Качество</button>
+  <button data-tab="dlss">DLSS 5</button>
+  <button data-tab="files">Файлы</button>
+</div>
+
+<!-- ================= МОДЕЛИ ================= -->
+<div id="tab-models">
+  <div class="card">
+    <div class="title">Ваш компьютер</div>
+    <div id="hw" class="small"></div>
+  </div>
+
+  <div class="card">
+    <div class="title">Видеокарта</div>
+    <div class="row"><label>Поколение</label><div class="ctl"><select id="gpuGen"></select></div></div>
+    <div class="row"><label>Видеопамять</label><div class="ctl"><select id="vramGb"></select></div></div>
+    <div id="tierHint" class="hint small"></div>
+    <label class="check"><input type="checkbox" id="manualModels">Настроить компоненты вручную</label>
+    <div id="manualBox" class="hidden">
+      <div class="row"><label>Трансформер</label><div class="ctl"><select id="transformer"></select></div></div>
+      <div class="row"><label>Текстовый энкодер</label><div class="ctl"><select id="encoder"></select></div></div>
+      <label class="check"><input type="checkbox" id="encoderCpu">Энкодер на процессоре (экономит видеопамять, медленнее)</label>
+      <div class="row"><label>VAE</label><div class="ctl"><select id="vae"></select></div></div>
+      <label class="check"><input type="checkbox" id="lowvram">Режим малой видеопамяти (движок с --lowvram)</label>
+    </div>
+    <div class="small muted">Поколение и память определяются сами — поправьте, если ошиблись. Набор моделей подбирается под них; латентный апскейлер ×2 и аудио-VAE ставятся всегда.</div>
+  </div>
+
+  <div class="card">
+    <div class="title">Какие инструменты скачать</div>
+    <div id="toolsChecks" class="grid2 small"></div>
+  </div>
+
+  <div class="card">
+    <div class="title">Файлы <span id="totalSize" class="small muted"></span></div>
+    <div id="fileList" class="files small"></div>
+  </div>
+
+  <div class="card">
+    <div class="title">Помощник (ЛЛМ со зрением) <button id="btnLlm">Установить</button></div>
+    <div class="row"><div class="ctl"><select id="llm"></select></div></div>
+    <div id="llmStatus" class="small muted"></div>
+    <div class="bar hidden" id="llmBarWrap"><div id="llmBar"></div></div>
+    <div class="small muted">Смотрит на кадр и заполняет поля инструментов: кнопки «✨ Описать» и «✎ Улучшить» (переписывает ваш текст, можно по-русски, в промт для модели), Работает локально (Qwen3-VL через llama.cpp), запускается по нажатию и выключается перед генерацией, чтобы не занимать видеопамять.</div>
+  </div>
+
+  <div class="card">
+    <div class="title">Доступ к Hugging Face</div>
+    <div class="small muted">Модели LTX бесплатные, но закрыты соглашением. Нужен токен (тип Read): <a id="lnkTokens">huggingface.co/settings/tokens</a></div>
+    <div class="row"><div class="ctl"><input type="password" id="token" placeholder="hf_..."><button id="btnToken">Проверить</button></div></div>
+    <div id="tokenState" class="small"></div>
+  </div>
+
+  <div class="btns">
+    <button id="btnInstall" class="primary">Установить / докачать выбранное</button>
+    <button id="btnStopSetup" class="danger" disabled>Стоп</button>
+  </div>
+  <div class="card" style="margin-top:10px">
+    <div id="setupStage" class="status muted">—</div>
+    <div class="bar"><div id="setupBar"></div></div>
+    <div id="setupEta" class="small muted"></div>
+    <div id="access" class="access small hidden"></div>
+    <pre class="log" id="setupLog"></pre>
+  </div>
+</div>
+
+<!-- ================= КАЧЕСТВО ================= -->
+<div id="tab-quality" class="hidden">
+  <div class="card">
+    <div class="title">Второй проход</div>
+    <label class="check"><input type="checkbox" id="stage2">Апскейлер ×2 + доработка (рекомендуется)</label>
+    <label class="check"><input type="checkbox" id="anchor">Опора на исходник во втором проходе</label>
+    <div class="small muted">Первый проход идёт в половину итогового разрешения, затем латентный апскейлер ×2 и 3 шага доработки восстанавливают детали и консистентность — как в официальных двухстадийных графах LTX. «Опора» снова подаёт исходные кадры во втором проходе: точнее держит лица и форму, но берёт больше видеопамяти.</div>
+  </div>
+  <div class="card">
+    <div class="title">Разрешение и память</div>
+    <div class="row"><label>Режим разрешения</label><div class="ctl"><select id="resMode">
+      <option value="preset">По пресету (ниже)</option><option value="auto">Как в композиции (до 1088)</option><option value="custom">Своя короткая сторона</option>
+    </select></div></div>
+    <div class="row"><label>Своя короткая сторона, px</label><div class="ctl"><input type="number" id="customSide" min="256" max="1088" step="32"></div></div>
+    <div class="row"><label>Итоговое разрешение (короткая сторона)</label><div class="ctl"><select id="outSide">
+      <option value="544">544p — быстро</option><option value="720">720p</option><option value="1088">1088p — максимум</option>
+    </select></div></div>
+    <div class="row"><label>Проработка деталей (шаги)</label><div class="ctl"><select id="detail">
+      <option value="1">Стандарт — 8 шагов (+3 во втором проходе)</option><option value="2">Детальнее — 12 (+6), ~×1.5 времени</option><option value="3">Максимум — 16 (+9), ~×2 времени</option>
+    </select></div></div>
+    <div class="row"><label>Кадров за проход</label><div class="ctl"><select id="chunkLen">
+      <option value="25">25</option><option value="49">49</option><option value="73">73</option><option value="97">97</option><option value="121">121</option>
+    </select></div></div>
+    <div class="row"><label>Тайл декодера</label><div class="ctl"><select id="tileSize">
+      <option value="256">256 — минимум памяти</option><option value="512">512</option><option value="768">768 — быстрее</option>
+    </select></div></div>
+    <div class="row"><label>Seed</label><div class="ctl"><input type="number" id="seed" min="0" step="1" style="width:110px"></div></div>
+    <label class="check"><input type="checkbox" id="randomSeed">Случайный seed при каждом запуске</label>
+    <div class="small muted">Не хватает видеопамяти — уменьшите кадры за проход или разрешение, либо выберите пресет слабее.</div>
+  </div>
+</div>
+
+<!-- ================= DLSS 5 ================= -->
+<div id="tab-dlss" class="hidden">
+  <div class="card">
+    <div class="title">DLSS 5 <button id="btnDlssInstall">Установить</button></div>
+    <div id="dlssStatus" class="small muted"></div>
+    <pre class="log hidden" id="dlssLog"></pre>
+    <div class="small muted">NVIDIA DLSS 5 Neural Rendering — отдельный инструмент «DLSS 5» в окне инструментов. Работает без ComfyUI и моделей LTX (сборка DLSS 5 Visual Enhancer, ~450 МБ, скачается сама при первом запуске). Нужна RTX 30/40/50.</div>
+  </div>
+  <div class="card">
+    <div class="title">Пресет</div>
+    <select id="d_preset"></select>
+  </div>
+  <div class="card">
+    <div class="title">Neural Rendering</div>
+    <div class="row"><label>Апскейл</label><div class="ctl"><select id="d_factor"></select></div></div>
+    <div class="row"><label>Стиль</label><div class="ctl"><select id="d_nr_style"></select></div></div>
+    <div class="row"><label>Интенсивность</label><div class="ctl"><input type="range" id="d_nr_intensity" min="0" max="2" step="0.05"><span class="val"></span></div></div>
+    <div class="row"><label>Локальный тон</label><div class="ctl"><input type="range" id="d_local_tone_strength" min="0" max="2" step="0.05"><span class="val"></span></div></div>
+    <div class="row"><label>Структура / детали</label><div class="ctl"><input type="range" id="d_local_structure_strength" min="0" max="2" step="0.05"><span class="val"></span></div></div>
+    <div class="row"><label>Кожа и поры</label><div class="ctl"><input type="range" id="d_skin_structure_strength" min="-1" max="2" step="0.05"><span class="val"></span></div></div>
+    <div class="small muted">Кожа −1 = решает модель. Natural — ближе к исходнику, Cinematic — глубже тени.</div>
+    <details>
+      <summary>Дополнительно</summary>
+      <div class="row"><label>Пресет NR</label><div class="ctl"><select id="d_nr_preset"></select></div></div>
+      <div class="row"><label>Кадры прогрева</label><div class="ctl"><input type="number" id="d_warmup" min="0" max="120" step="1"></div></div>
+      <div class="small muted">Прогрев: сколько раз модель «прокручивает» первый кадр, чтобы начало не мерцало.</div>
+    </details>
+  </div>
+</div>
+
+<!-- ================= ФАЙЛЫ ================= -->
+<div id="tab-files" class="hidden">
+  <div class="card">
+    <div class="title">Движок <span><button id="btnStart">Запустить</button> <button id="btnStop">Остановить</button></span></div>
+    <div id="engStatus" class="small muted"></div>
+    <div id="engPath" class="small muted"></div>
+    <div class="row"><div class="ctl"><button id="btnPickEngine">Указать готовый ComfyUI portable…</button></div></div>
+    <div class="small muted">Если ComfyUI portable уже стоит (папка с python_embeded и ComfyUI) — укажите её, качать заново не придётся.</div>
+  </div>
+  <div class="card">
+    <div class="title">Папка результатов и секвенций</div>
+    <div class="row"><div class="ctl"><input type="text" id="workDir"></div></div>
+    <div class="row"><div class="ctl"><button id="btnWork">Выбрать папку…</button> <button id="btnWorkOpen">Открыть</button></div></div>
+    <div id="workInfo" class="small muted"></div>
+    <div class="small muted">Сюда пишутся кадры из AE, результаты генераций и DLSS 5 (по подпапке на каждый прогон). Нужен диск с запасом места: 4K-секвенции весят десятки гигабайт.</div>
+    <label class="check"><input type="checkbox" id="cleanupSource">Удалять промежуточные кадры после импорта</label>
+    <div class="row"><label>Шаблон вывода AE</label><div class="ctl"><select id="omTemplate"></select></div></div>
+    <div class="small muted">«Авто» сам ставит PNG-секвенцию и проверяет, что формат применился.</div>
+  </div>
+  <div class="card">
+    <div class="title">Очистка генераций</div>
+    <div class="row"><label>Что удалять</label><div class="ctl"><select id="cleanMode">
+      <option value="comp">Всё, что не используется в композиции</option>
+      <option value="count">Старые прогоны, оставить последние N</option>
+    </select></div></div>
+    <div id="cleanCompBox">
+      <div class="row"><label>Композиция</label><div class="ctl"><select id="cleanRoot"></select><button id="btnCleanComps" title="Обновить список">↻</button></div></div>
+      <label class="check"><input type="checkbox" id="cleanOrphans">Также удалить с диска генерации, которых нет в этом проекте</label>
+      <div class="small muted">Остаётся только то, что участвует в выбранной композиции (вместе с вложенными). Остальные композиции и секвенции Zouwu Forge удаляются из проекта AE, их кадры — с диска. Ваши собственные футажи и композиции не трогаются.</div>
+    </div>
+    <div id="cleanCountBox" class="hidden">
+      <div class="row"><label>Оставить последних</label><div class="ctl"><input type="number" id="cleanupKeep" min="0" max="999" step="1" style="width:80px"></div></div>
+      <label class="check"><input type="checkbox" id="cleanupProtect">Не удалять то, что используется в открытом проекте AE</label>
+    </div>
+    <label class="check"><input type="checkbox" id="cleanTemp">Удалять промежуточные файлы у оставшихся генераций (кадры из AE — PNG/TIFF/видео, части, маски)</label>
+    <div class="btns">
+      <button id="btnCleanScan">Посчитать</button>
+      <button id="btnCleanRun" class="danger" disabled>Удалить</button>
+    </div>
+    <div id="cleanInfo" class="small muted"></div>
+    <div id="cleanList" class="files small"></div>
+  </div>
+</div>
+
+<div class="btns" style="margin-top:6px">
+  <button id="btnOpenRun">Открыть инструменты</button>
+</div>
+<div id="saved" class="small muted" style="margin-top:6px">Настройки сохраняются автоматически.</div>
+
+<script src="js/core.js"></script>
+<script src="js/models.js"></script>
+<script src="js/tools.js"></script>
+<script src="js/defaults.js"></script>
+<script src="js/llm.js"></script>
+<script src="js/installer.js"></script>
+<script src="js/dlss.js"></script>
+<script src="js/cleanup.js"></script>
+<script src="js/settings.js"></script>
+</body>
+</html>

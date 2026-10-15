@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Zouwu Forge — Инструменты</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .badge.ltx { background: #7c5cff; color: #fff; }
+  .hint { background: var(--field); border-left: 3px solid #7c5cff; padding: 6px 8px; border-radius: 3px; margin: 6px 0; }
+  textarea { width: 100%; min-height: 48px; resize: vertical; background: var(--field); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px; font: inherit; }
+  .field { margin: 7px 0; }
+  .field > .lbl { color: var(--muted); margin-bottom: 3px; display: block; }
+  .req::after { content: ' *'; color: var(--warn); }
+  .lblrow { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 3px; }
+  .lblrow > .lbl { color: var(--muted); }
+  .aibtns { display: flex; gap: 4px; }
+  .aibtns button { padding: 1px 7px; font-size: 11px; line-height: 16px; }
+  .aibtns button.busy { opacity: .6; pointer-events: none; }
+  option:disabled { color: #666; }
+  button.primary { background: #7c5cff; border-color: #7c5cff; color: #fff; }
+  button.primary:hover { background: #6a4be6; }
+  .bar > div { background: #7c5cff; }
+</style>
+</head>
+<body>
+<h1><span class="badge ltx">Zouwu Forge</span> Постпродакшн</h1>
+
+<div class="card">
+  <div class="title">Композиция <button id="btnRefresh">Обновить</button></div>
+  <div id="compInfo" class="kv small"><span>—</span><span class="muted">Откройте композицию</span></div>
+</div>
+
+<div class="card">
+  <div class="title">Инструмент <a id="lnkSettings">Настройки</a></div>
+  <select id="tool"></select>
+  <div id="hint" class="hint small"></div>
+  <div id="fields"></div>
+  <div class="row" id="strengthRow"><label>Сила LoRA</label><div class="ctl"><input type="range" id="strength" min="0" max="1.5" step="0.05"><span class="val"></span></div></div>
+  <div id="outModeRow" class="row hidden"><label>Результат</label><div class="ctl"><select id="outMode"></select></div></div>
+</div>
+
+<div class="card" id="stage2Card">
+  <div class="title">Второй проход</div>
+  <label class="check"><input type="checkbox" id="stage2"><b>Апскейлер ×2 + доработка</b></label>
+  <label class="check"><input type="checkbox" id="anchorRun">Опора на исходник во втором проходе</label>
+  <div class="small muted">Восстанавливает детали и консистентность. Работает во всех инструментах.</div>
+  <div class="row" style="margin-top:6px"><label>Проработка деталей</label><div class="ctl"><select id="detailRun">
+    <option value="1">Стандарт — 8 шагов (+3 во втором проходе)</option><option value="2">Детальнее — 12 (+6), ~×1.5 времени</option><option value="3">Максимум — 16 (+9), ~×2 времени</option>
+  </select></div></div>
+  <div class="small muted">Больше шагов — мельче проработка (фактура, края, восстановленный фон). Время генерации растёт.</div>
+</div>
+
+<div class="card">
+  <div class="title">Какие кадры</div>
+  <label class="radio"><input type="radio" name="range" value="workarea">Рабочая область <span class="muted small" id="rWork"></span></label>
+  <label class="radio"><input type="radio" name="range" value="comp">Вся композиция <span class="muted small" id="rComp"></span></label>
+  <label class="radio"><input type="radio" name="range" value="selected">По выделенным слоям <span class="muted small" id="rSel"></span></label>
+  <label class="radio"><input type="radio" name="range" value="custom">Свои кадры</label>
+  <div class="row" id="customRow">
+    <label>с … по (включительно)</label>
+    <div class="ctl"><input type="number" id="customStart" step="1"><input type="number" id="customEnd" step="1"></div>
+  </div>
+  <div class="row" style="margin-top:6px"><label>Разрешение (по короткой стороне)</label><div class="ctl"><select id="resRun">
+    <option value="544">544 — быстро</option><option value="720">720</option><option value="1088">1088 — максимум</option>
+    <option value="auto">Как в композиции (до 1088)</option><option value="custom">Своё…</option>
+  </select></div></div>
+  <div class="row hidden" id="customSideRow"><label>Короткая сторона, px (256–1088, кратно 32)</label><div class="ctl"><input type="number" id="customSideRun" min="256" max="1088" step="32"></div></div>
+  <div id="sizeInfo" class="small muted"></div>
+</div>
+
+<div class="card">
+  <div class="title">Вывод</div>
+  <div class="small muted">Всегда создаётся новая композиция в папке проекта «Zouwu Forge Results».</div>
+  <label class="check"><input type="checkbox" id="addToSource">Также положить слой в исходную композицию</label>
+  <div class="row" style="margin-top:6px"><label>Папка результатов и секвенций</label><div class="ctl"><button id="btnWorkRun">Выбрать…</button> <button id="btnWorkOpenRun">Открыть</button></div></div>
+  <div id="workDirRun" class="small muted" style="word-break:break-all"></div>
+</div>
+
+<div class="btns">
+  <button id="btnRun" class="primary">▶ Запустить</button>
+  <button id="btnStop" class="danger" disabled>■ Стоп</button>
+</div>
+
+<div class="card" style="margin-top:10px">
+  <div id="stage" class="status muted">Готово к запуску</div>
+  <div class="bar"><div id="bar"></div></div>
+  <div id="eta" class="small muted"></div>
+  <div id="engLine" class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:Consolas,monospace"></div>
+  <pre class="log" id="log"></pre>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/models.js"></script>
+<script src="js/tools.js"></script>
+<script src="js/defaults.js"></script>
+<script src="js/llm.js"></script>
+<script src="js/dlss.js"></script>
+<script src="js/run.js"></script>
+</body>
+</html>
