@@ -6,7 +6,7 @@
 
 Автор — **Zouwu** (Николай Волков), CG / Motion / AI · Telegram: [@Zouwu_N](https://t.me/Zouwu_N)
 
-**Версия 1.0** · [как это работает](#как-это-работает) · [установка](#установка) · [скачать](https://github.com/Zouwu-nik/ZouwuForge/releases/latest/download/ZouwuForge.zip)
+**Версия 1.0** · [как это работает](#как-это-работает) · [установка](#установка) · [скачать](https://github.com/Zouwu-nik/ZouwuForge/releases/latest)
 
 ---
 
@@ -48,7 +48,7 @@
 
 ## Установка
 
-1. [**Скачайте ZouwuForge.zip**](https://github.com/Zouwu-nik/ZouwuForge/releases/latest/download/ZouwuForge.zip) и распакуйте **целиком** в папку, где программа будет жить, например `D:\ZouwuForge`. Движок, модели и результаты ставятся именно туда.
+1. [**Скачайте ZouwuForge.zip**](https://github.com/Zouwu-nik/ZouwuForge/releases/latest) (раздел Assets) и распакуйте **целиком** в папку, где программа будет жить, например `D:\ZouwuForge`. Движок, модели и результаты ставятся именно туда.
 2. Закройте After Effects и запустите `install.bat` из этой папки. Если Windows покажет «Система Windows защитила ваш компьютер» — «Подробнее» → «Выполнить в любом случае» (у скрипта нет цифровой подписи).
 3. Откройте AE → **Окно → Расширения → «Zouwu Forge — Настройки»**, вкладка «Модели»: проверьте видеокарту и память, вставьте токен Hugging Face и нажмите **«Установить / докачать»**. Загрузка идёт в фоне и докачивается при обрывах.
 4. Работайте в **«Zouwu Forge — Инструменты»**.
