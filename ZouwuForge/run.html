@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Zouwu Forge — Инструменты</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .badge.ltx { background: #7c5cff; color: #fff; }
+  .hint { background: var(--field); border-left: 3px solid #7c5cff; padding: 6px 8px; border-radius: 3px; margin: 6px 0; }
+  textarea { width: 100%; min-height: 48px; resize: vertical; background: var(--field); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 4px 6px; font: inherit; }
+  .field { margin: 7px 0; }
+  .field > .lbl { color: var(--muted); margin-bottom: 3px; display: block; }
+  .req::after { content: ' *'; color: var(--warn); }
+  .lblrow { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 3px; }
+  .lblrow > .lbl { color: var(--muted); }
+  .aibtns { display: flex; gap: 4px; }
+  .aibtns button { padding: 1px 7px; font-size: 11px; line-height: 16px; }
+  .aibtns button.busy { opacity: .6; pointer-events: none; }
+  option:disabled { color: #666; }
+  button.primary { background: #7c5cff; border-color: #7c5cff; color: #fff; }
+  button.primary:hover { background: #6a4be6; }
+  .bar > div { background: #7c5cff; }
+  #stage2Lbl.dim { opacity: .5; }
+  .qi { display: flex; align-items: flex-start; gap: 6px; padding: 3px 0; border-bottom: 1px solid var(--line); }
+  .qi > span { flex: 1; word-break: break-word; }
+  .qi.on { color: #b9a8ff; }
+  .qi a { cursor: pointer; padding: 0 4px; color: var(--muted); }
+  .qi a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+<h1><span class="badge ltx">Zouwu Forge</span> Постпродакшн</h1>
+
+<div class="card">
+  <div class="title">Композиция <button id="btnRefresh">Обновить</button></div>
+  <div id="compInfo" class="kv small"><span>—</span><span class="muted">Откройте композицию</span></div>
+</div>
+
+<div class="card">
+  <div class="title">Инструмент <a id="lnkSettings">Настройки</a></div>
+  <select id="tool"></select>
+  <div id="hint" class="hint small"></div>
+  <div id="fields"></div>
+  <div class="row" id="strengthRow"><label>Сила LoRA</label><div class="ctl"><input type="range" id="strength" min="0" max="2" step="0.05"><span class="val"></span></div></div>
+  <div id="outModeRow" class="row hidden"><label>Результат</label><div class="ctl"><select id="outMode"></select></div></div>
+</div>
+
+<div class="card" id="stage2Card">
+  <div class="title">Апскейл</div>
+  <label class="check" id="stage2Lbl"><input type="checkbox" id="stage2"><b>Апскейл ×2 + доработка</b></label>
+  <div id="stage2Note" class="small" style="margin:2px 0 6px"></div>
+  <label class="check"><input type="checkbox" id="anchorRun">Опора на исходник при апскейле</label>
+  <div class="small muted">Запоминается для каждого инструмента отдельно. По умолчанию включён только там, где нужен.</div>
+  <div class="row" style="margin-top:6px"><label>Проработка деталей</label><div class="ctl"><select id="detailRun">
+    <option value="1">Стандарт — 8 шагов (+3 при апскейле)</option><option value="2">Детальнее — 12 (+6), ~×1.5 времени</option><option value="3">Максимум — 16 (+9), ~×2 времени</option>
+  </select></div></div>
+  <div class="row"><label>Склейка частей внахлёст</label><div class="ctl"><select id="overlapRun">
+    <option value="0">Выкл</option><option value="9">9 кадров</option><option value="17">17 кадров</option><option value="25">25 кадров</option>
+  </select></div></div>
+  <div class="small muted">Больше шагов — мельче проработка (фактура, края, восстановленный фон). Время генерации растёт.</div>
+</div>
+
+<div class="card">
+  <div class="title">Какие кадры</div>
+  <label class="radio"><input type="radio" name="range" value="workarea">Рабочая область <span class="muted small" id="rWork"></span></label>
+  <label class="radio"><input type="radio" name="range" value="comp">Вся композиция <span class="muted small" id="rComp"></span></label>
+  <label class="radio"><input type="radio" name="range" value="selected">По выделенным слоям <span class="muted small" id="rSel"></span></label>
+  <label class="radio"><input type="radio" name="range" value="custom">Свои кадры</label>
+  <div class="row" id="customRow">
+    <label>с … по (включительно)</label>
+    <div class="ctl"><input type="number" id="customStart" step="1"><input type="number" id="customEnd" step="1"></div>
+  </div>
+  <div class="row" style="margin-top:6px"><label>Разрешение</label><div class="ctl"><select id="resRun">
+    <option value="544">544p — быстро</option><option value="720">720p</option><option value="1088">1088p — максимум</option>
+  </select></div></div>
+  <div class="row"><label>Кадров за проход</label><div class="ctl"><input type="number" id="chunkRun" min="9" step="8" style="width:90px"></div></div>
+  <div class="small muted">Рекомендуется не более 121. Это сколько кадров модель генерирует за один проход, а не длина вашей композиции: длинный диапазон делится на проходы такого размера, и на стыке проходов возможен скачок (его сглаживает «Склейка внахлёст»). Больше 121 — можно, генерация будет дольше. Значение округляется по рекомендации разработчиков LTX.</div>
+  <div id="sizeInfo" class="small muted"></div>
+</div>
+
+<div class="card">
+  <div class="title">Вывод</div>
+  <label class="check"><input type="checkbox" id="newComp">Создать новую композицию (папка «Zouwu Forge Results»)</label>
+  <label class="check"><input type="checkbox" id="addToSource">Положить слоем в исходную композицию</label>
+  <div class="small muted">Включено оба — и новая композиция, и слой в исходной. Хотя бы один пункт остаётся включённым. Outpaint меняет размер кадра, поэтому для него новая композиция создаётся всегда.</div>
+  <div class="row" style="margin-top:6px"><label>Папка результатов и секвенций</label><div class="ctl"><button id="btnWorkRun">Выбрать…</button> <button id="btnWorkOpenRun">Открыть</button></div></div>
+  <div id="workDirRun" class="small muted" style="word-break:break-all"></div>
+</div>
+
+<div class="btns">
+  <button id="btnRun" class="primary">▶ Запустить</button>
+  <button id="btnStop" class="danger" disabled>■ Стоп</button>
+</div>
+<div class="btns" style="margin-top:6px">
+  <button id="btnProbe" title="25 кадров с начала диапазона, 544p, без апскейла — быстро проверить промт и силу перед полным прогоном. Результат — отдельная композиция с пометкой [проба].">Проба (25 кадр., 544p)</button>
+  <button id="btnQueueAdd" title="Запомнить текущее задание (композиция, инструмент, поля, кадры, разрешение) и поставить в очередь">+ В очередь</button>
+</div>
+
+<div class="card hidden" id="pfBox" style="margin-top:10px;border-color:#c0504d">
+  <div class="title">Файл подкачки Windows</div>
+  <div id="pfMsg" class="small"></div>
+  <div class="small muted" style="margin:4px 0">Плагин сам выставит файл подкачки 32–64 ГБ на самом быстром диске (NVMe → SSD → HDD). Нужно одно «Да» в окне Windows и перезагрузка.</div>
+  <div class="btns"><button id="btnPagefileFix" class="primary">Исправить файл подкачки</button></div>
+</div>
+
+<div class="card hidden" id="queueCard" style="margin-top:10px">
+  <div class="title">Очередь <span id="queueCount" class="muted small"></span></div>
+  <div id="queueList" class="small"></div>
+  <div class="btns" style="margin-top:6px"><button id="btnQueueRun" class="primary">▶ Запустить очередь</button><button id="btnQueueClear">Очистить</button></div>
+  <div class="small muted" style="margin-top:4px">Задания идут по порядку, каждое — в своей композиции. Удачные убираются из списка, с ошибкой — остаются. «Стоп» прерывает текущее и останавливает очередь.</div>
+</div>
+
+<div class="card" style="margin-top:10px">
+  <div id="stage" class="status muted">Готово к запуску</div>
+  <div class="bar"><div id="bar"></div></div>
+  <div id="eta" class="small muted"></div>
+  <div id="engLine" class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:Consolas,monospace"></div>
+  <div id="previewBox" class="hidden" style="margin:6px 0">
+    <div style="background:#000;border:1px solid var(--line);border-radius:4px;min-height:60px;display:flex;align-items:center;justify-content:center">
+      <img id="previewImg" alt="" style="max-width:100%;max-height:360px;display:block;image-rendering:auto">
+    </div>
+    <div id="previewNote" class="small muted"></div>
+  </div>
+  <pre class="log" id="log"></pre>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/models.js"></script>
+<script src="js/tools.js"></script>
+<script src="js/defaults.js"></script>
+<script src="js/llm.js"></script>
+<script src="js/dlss.js"></script>
+<script src="js/run.js"></script>
+</body>
+</html>
